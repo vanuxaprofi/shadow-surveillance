@@ -8,10 +8,8 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 from sqlalchemy import select, update
 
-# Конфигурация проекта
-# Конфигурация проекта
+# Конфигурация проекта (Берем только то, что реально есть в config.py)
 from config import BOT_TOKEN, ADMIN_ID
-from config import import BOT_TOKEN, ADMIN_ID, SUPPORT_LINK
 
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
 PORT = int(os.getenv("PORT", 8000))
