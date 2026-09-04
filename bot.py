@@ -9,6 +9,7 @@ from aiohttp import web
 from sqlalchemy import select, update
 
 # Конфигурация проекта
+# Конфигурация проекта
 from config import BOT_TOKEN, ADMIN_ID
 from database import init_db, async_session, User
 
