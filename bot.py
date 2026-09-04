@@ -33,7 +33,7 @@ def get_admin_menu():
     builder = ReplyKeyboardBuilder()
     builder.button(text="👁 Поставить на мониторинг")
     builder.button(text="📊 Активные цели")
-    builder.button(text="🛡 Настройка Анти-отслежки")
+    builder.button(text="🛡 Настройка Anti-track")
     builder.button(text="📥 Заявки пользователей")
     builder.adjust(2)
     return builder.as_markup(resize_keyboard=True)
@@ -50,7 +50,6 @@ async def cmd_start(message: types.Message):
         user = result.scalar_one_or_none()
         
         if not user:
-            # Администратору сразу даем полный доступ, обычным пользователям — нет
             is_admin = (user_id == ADMIN_ID)
             user = User(
                 tg_id=user_id,
@@ -62,7 +61,6 @@ async def cmd_start(message: types.Message):
             session.add(user)
             await session.commit()
             
-    # Разделение интерфейса при старте
     if user_id == ADMIN_ID:
         await message.answer(
             f"🛠 **Добро пожаловать, Администратор!**\n"
@@ -107,7 +105,6 @@ async def process_tariff_request(callback: types.CallbackQuery):
     username = callback.from_user.username or f"id{user_id}"
     tariff_type = callback.data.replace("buy_t_", "")
     
-    # Отправляем уведомление админу
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Активировать", callback_data=f"adm_app_{user_id}_{tariff_type}")
     builder.button(text="❌ Отклонить", callback_data=f"adm_den_{user_id}")
@@ -146,7 +143,6 @@ async def admin_process_target(message: types.Message):
     target_username = message.text.replace("@", "").strip()
     
     async with async_session() as session:
-        # Проверяем контр-защиту цели (Пункт 17 ТЗ)
         result = await session.execute(select(User).where(User.username == target_username))
         target = result.scalar_one_or_none()
         
@@ -158,13 +154,15 @@ async def admin_process_target(message: types.Message):
                 await message.answer(f"🟢 Цель `@{target_username}` добавлена. (Сработал «Контроль» — цель получила скрытое уведомление).")
                 try:
                     await bot.send_message(chat_id=target.tg_id, text="⚠️ **Обнаружена попытка отслеживания вашего профиля системой Shadow Surveillance!**")
-                except Exception: pass
+                except Exception: 
+                    pass
                 return
             elif target.anti_track_level == "full_spy":
                 await message.answer(f"🟢 Цель `@{target_username}` добавлена. (Сработал «Полный шпион» — вам будут отправляться фейк-логи).")
                 try:
                     await bot.send_message(chat_id=target.tg_id, text="🥷 **Сработал «Полный шпион»!** Бот начал скармливать шпиону ложные данные.")
-                except Exception: pass
+                except Exception: 
+                    pass
                 return
                 
         await message.answer(f"🟢 Цель `@{target_username}` успешно поставлена на мониторинг сессий через MTProto.")
@@ -172,7 +170,7 @@ async def admin_process_target(message: types.Message):
 @dp.message(F.text == "📊 Активные цели")
 async def admin_list_targets(message: types.Message):
     if message.from_user.id != ADMIN_ID: return
-    await message.answer("📋 **Список объектов на мониторинге:**\n\n_Пока нет активных целей сессий. Используйте кнопку контроля._", parse_mode="Markdown")
+    await message.answer("📋 **Список объектов на мониторинге:**\n\n_Пока нет active целей сессий. Используйте кнопку контроля._", parse_mode="Markdown")
 
 @dp.message(F.text == "🛡 Настройка Anti-track")
 async def admin_anti_track_settings(message: types.Message):
@@ -206,9 +204,9 @@ async def admin_view_requests(message: types.Message):
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def admin_approve(callback: types.CallbackQuery):
     if callback.from_user.id != ADMIN_ID: return
-    data = callback.data.replace("adm_app_", "").split("_")
-    client_id = int(data[0])
-    tariff = data[1]
+    raw_data = callback.data.replace("adm_app_", "").split("_")
+    client_id = int(raw_data[0])
+    tariff = raw_data[1]
     
     slots = 1 if tariff == "start" else 5
     
@@ -217,4 +215,35 @@ async def admin_approve(callback: types.CallbackQuery):
         await session.commit()
         
     await callback.message.edit_text(f"✅ Доступ для ID {client_id} успешно активирован (Тариф {tariff.upper()}).")
-    try:await bot.send_message(chat_id=client_id, text=f"🎉 Ваша заявка одобрена! Доступ к системе Shadow Surveillance активирован.\nПо любым вопросам: {SUPPORT_LINK}")except Exception: pass@dp.callback_query(F.data.startswith("adm_den_"))async def admin_deny(callback: types.CallbackQuery):if callback.from_user.id != ADMIN_ID: returnclient_id = int(callback.data.replace("adm_den_", ""))await callback.message.edit_text("❌ Заявка пользователя отклонена.")--- ВЕБХУКИ ---async def on_startup(bot: Bot) -> None:await init_db()webhook_url = f"{RENDER_EXTERNAL_URL}/webhook"await bot.set_webhook(webhook_url)def main():app = web.Application()webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)webhook_requests_handler.register(app, path="/webhook")setup_application(app, dp, bot=bot)dp.startup.register(on_startup)web.run_app(app, host="0.0.0.0", port=PORT)if name == "main":main()
+    try:
+        await bot.send_message(
+            chat_id=client_id, 
+            text=f"🎉 **Ваша заявка одобрена!** Доступ к системе Shadow Surveillance активирован.\nПо любым вопросам: {SUPPORT_LINK}"
+        )
+    except Exception:
+        pass
+
+@dp.callback_query(F.data.startswith("adm_den_"))
+async def admin_deny(callback: types.CallbackQuery):
+    if callback.from_user.id != ADMIN_ID: 
+        return
+    data = callback.data.replace("adm_den_", "")
+    client_id = int(data)
+    await callback.message.edit_text(f"❌ Заявка пользователя {client_id} отклонена.")
+
+# --- ВЕБХУКИ ---
+async def on_startup(bot: Bot) -> None:
+    await init_db()
+    webhook_url = f"{RENDER_EXTERNAL_URL}/webhook"
+    await bot.set_webhook(webhook_url)
+
+def main():
+    app = web.Application()
+    webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
+    webhook_requests_handler.register(app, path="/webhook")
+    setup_application(app, dp, bot=bot)
+    dp.startup.register(on_startup)
+    web.run_app(app, host="0.0.0.0", port=PORT)
+
+if __name__ == "__main__":
+    main()
