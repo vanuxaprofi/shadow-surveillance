@@ -11,7 +11,7 @@ from sqlalchemy import select, update
 # Конфигурация проекта
 # Конфигурация проекта
 from config import BOT_TOKEN, ADMIN_ID
-from database import init_db, async_session, User
+from config import import BOT_TOKEN, ADMIN_ID, SUPPORT_LINK
 
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
 PORT = int(os.getenv("PORT", 8000))
